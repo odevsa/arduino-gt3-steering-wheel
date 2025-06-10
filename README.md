@@ -22,7 +22,7 @@ This code will allow to make a bluetooth GT3 steering wheel.
 
   ![TP4056 USB-C](assets/tp4056.jpg "TP4056 USB-C")
 
-- 1x Rechargeable Lithium Battery
+- 1x 3.7v Rechargeable Lithium Battery
 
   ![Rechargeable Lithium Battery](assets/battery.jpg "Rechargeable Lithium Battery")
 
