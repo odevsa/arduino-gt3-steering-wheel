@@ -73,11 +73,12 @@ Just change pin values if you have used a different wiring, select the board `ES
 
 I did a remix from another remix from Formula B1.
 
-I needed to remix it to:
+I needed to remix it to add:
 
-- A hole for switch on/off
-- Local for charger module
-- Hole size to encoders
+- Hole for switch on/off
+- Bed for charger module
+- Holes resized for encoders
+- Holes for LEDs
 
 **My Remix:**
 https://www.printables.com/model/1306908-formula-b1-remix-esp32-bluetooth
