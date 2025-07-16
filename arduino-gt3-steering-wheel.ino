@@ -26,8 +26,9 @@ int previousRightEncoderClock;
 #define PIN_BATTERY_LEVEL 34
 #define BATTERY_VOLTAGE_MAX 4.2f
 #define BATTERY_VOLTAGE_MIN 3.0f
+#define BATTERY_ADC_REFERENCE 3.3f
 #define BATTERY_ADC_MAX 4095.0f
-#define BATTERY_DIVIDER_RATIO ((100.0f + 100.0f) / 100.0f) // 2 resistores de 100k em série, então a tensão é dividida por 2
+#define BATTERY_DIVIDER_RATIO ((100.0f + 100.0f) / 100.0f) // 2 resistors of 100k ohms
 #define BATTERY_AVG_AMOUNT 10
 #define BATTERY_READ_INTERVAL 1000
 
@@ -101,9 +102,8 @@ void loadBatteryLevel() {
 
   int adcValue = analogRead(PIN_BATTERY_LEVEL);
 
-  float vOut = (adcValue / BATTERY_ADC_MAX) * 3.3f; // ESP32 ADC referencia 3.3V
-  float vBat = vOut * BATTERY_DIVIDER_RATIO;
-  float percent = (vBat - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN) * 100.0f;
+  float batteryVoltage = (adcValue / BATTERY_ADC_MAX) * BATTERY_ADC_REFERENCE * BATTERY_DIVIDER_RATIO;
+  float percent = (batteryVoltage - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN) * 100.0f;
   
   if (percent > 100.0f) percent = 100.0f;
   if (percent < 0.0f) percent = 0.0f;
