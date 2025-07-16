@@ -22,6 +22,21 @@ int buttonColSize = sizeof(PIN_BUTTON_ARRAY_COL) / sizeof(PIN_BUTTON_ARRAY_COL[0
 int previousLeftEncoderClock;
 int previousRightEncoderClock;
 
+// Battery
+#define PIN_BATTERY_LEVEL 34
+#define BATTERY_VOLTAGE_MAX 4.2f
+#define BATTERY_VOLTAGE_MIN 3.0f
+#define BATTERY_ADC_MAX 4095.0f
+#define BATTERY_DIVIDER_RATIO ((100.0f + 100.0f) / 100.0f) // 2 resistores de 100k em série, então a tensão é dividida por 2
+#define BATTERY_AVG_AMOUNT 10
+#define BATTERY_READ_INTERVAL 1000
+
+unsigned long lastBatteryRead = 0;
+unsigned long lastBatteryReport = 0;
+float batterySum = 0.0f;
+int batterySamples = 0;
+bool batteryFirstReport = true;
+
 // Gamepad
 #define NUMBER_OF_BUTTONS 18
 
@@ -80,6 +95,36 @@ void loadButtons()
   if(leftEncoder + rightEncoder != 0) delay(ENCODER_DELAY);
 }
 
+void loadBatteryLevel() {
+  if (millis() - lastBatteryRead < BATTERY_READ_INTERVAL) return;
+  lastBatteryRead = millis();
+
+  int adcValue = analogRead(PIN_BATTERY_LEVEL);
+
+  float vOut = (adcValue / BATTERY_ADC_MAX) * 3.3f; // ESP32 ADC referencia 3.3V
+  float vBat = vOut * BATTERY_DIVIDER_RATIO;
+  float percent = (vBat - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN) * 100.0f;
+  
+  if (percent > 100.0f) percent = 100.0f;
+  if (percent < 0.0f) percent = 0.0f;
+  
+  if (batteryFirstReport) {
+    batteryFirstReport = false;
+    bleGamepad.setBatteryLevel(percent);
+    return;
+  }
+
+  batterySum += percent;
+  batterySamples++;
+
+  if (batterySamples >= BATTERY_AVG_AMOUNT) {
+    float avgPercent = batterySum / batterySamples;
+    bleGamepad.setBatteryLevel(avgPercent);
+    batterySum = 0.0f;
+    batterySamples = 0;
+  }
+}
+
 void sendReport()
 {
   if (!statusChanged) return;
@@ -109,6 +154,8 @@ void setup()
   pinMode(PIN_RIGHT_ENCODER_SWITCH, INPUT_PULLUP);
   previousRightEncoderClock = digitalRead(PIN_RIGHT_ENCODER_CLOCK);
 
+  pinMode(PIN_BATTERY_LEVEL, INPUT);
+
   BleGamepadConfiguration bleGamepadConfig;
   bleGamepadConfig.setAutoReport(false);
   bleGamepadConfig.setButtonCount(NUMBER_OF_BUTTONS);
@@ -120,5 +167,6 @@ void setup()
 void loop()
 {
   loadButtons();
+  loadBatteryLevel();
   sendReport();
 }
