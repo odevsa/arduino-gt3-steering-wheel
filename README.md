@@ -50,7 +50,7 @@ This code will allow to make a bluetooth GT3 steering wheel.
 
 You will need install in your Arduino the library below:
 
-- ESP32-BLW-Gamepad
+- ESP32-BLE-Gamepad
 - NimBLE-Arduino
 
 # Wiring
