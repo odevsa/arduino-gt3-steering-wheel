@@ -59,7 +59,7 @@ This is just a wiring suggestion, you can customize and change in pin definition
 
 If you are going to use this wiring suggestion it will just be `plug-n-play` with the current code.
 
-TODO: wiring.svg
+![Wiring](assets/wiring.svg "Wiring")
 
 Example
 ![Face PLate](assets/face-plate.jpg "Face PLate")
