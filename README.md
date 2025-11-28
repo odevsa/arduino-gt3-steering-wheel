@@ -22,6 +22,10 @@ This code will allow to make a bluetooth GT3 steering wheel.
 
   ![TP4056 USB-C](assets/tp4056.jpg "TP4056 USB-C")
 
+- 1x DC Step Up Module MT3608
+
+  ![MT3608](assets/mt3608.jpg "MT3608")
+
 - 1x 3.7v Rechargeable Lithium Battery
 
   ![Rechargeable Lithium Battery](assets/battery.jpg "Rechargeable Lithium Battery")
@@ -46,6 +50,14 @@ This code will allow to make a bluetooth GT3 steering wheel.
 
   ![Micro Switch](assets/micro-switch.jpg "Micro Switch")
 
+- 1x Resistors 220Ω
+
+  ![Resistor](assets/resistor-220ohm.jpg "Resistor")
+
+- 2x Resistors 100kΩ
+
+  ![Resistor](assets/resistor-100kohm.jpg "Resistor")
+
 # Dependencies
 
 You will need install in your Arduino the library below:
@@ -64,6 +76,34 @@ If you are going to use this wiring suggestion it will just be `plug-n-play` wit
 Example
 ![Face PLate](assets/face-plate.jpg "Face PLate")
 ![Shell](assets/shell.jpg "Shell")
+
+# Battery Reading Calibration (ADC Vref)
+
+The ESP32's internal voltage reference (Vref) is often inaccurate, causing a calculated voltage (V_CALC) mismatch with the actual battery voltage (V_REAL).
+
+Uncomment for debuging
+
+```
+// Serial.println("Calculated Voltage: " + String(batteryVoltage, 3));
+```
+
+To calibrate:
+
+1. Measure the real battery voltage (V_REAL) with a multimeter (e.g., 4.08V).
+2. Note the calculated voltage (V_CALC) from the Serial Monitor (e.g., 3.79V).
+3. **Update the Vref in the formula below**: V_REF_NEW = (V_REAL / V_CALC) \* 3.3f.
+
+Example:
+
+```
+(4.08 / 3.79) * 3.3 = 3.55
+```
+
+Finally update this constant with your calculated V_REF_NEW value.
+
+```
+#define BATTERY_ADC_REFERENCE 3.55f
+```
 
 # Firmware
 
