@@ -58,6 +58,11 @@ This code will allow to make a bluetooth GT3 steering wheel.
 
   ![Resistor](assets/resistor-100kohm.jpg "Resistor")
 
+- 2x 8x3mm Magnets
+
+  ![Magnets](assets/magnets.jpg "Magnets")
+
+
 # Dependencies
 
 You will need install in your Arduino the library below:
