@@ -7,7 +7,7 @@
 
 // CPU Frequency and Sleep Timeout
 #define CPU_FREQ_MHZ 80
-#define SLEEP_TIMEOUT_MS 900000
+#define SLEEP_TIMEOUT_MS 300000 // 1000 * 60 * 5 = 5 minutes
 
 unsigned long lastActivityTime = 0;
 
