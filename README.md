@@ -62,7 +62,6 @@ This code will allow to make a bluetooth GT3 steering wheel.
 
   ![Magnets](assets/magnets.jpg "Magnets")
 
-
 # Dependencies
 
 You will need install in your Arduino the library below:
@@ -89,7 +88,7 @@ The ESP32's internal voltage reference (Vref) is often inaccurate, causing a cal
 Uncomment for debuging
 
 ```
-// Serial.println("Calculated Voltage: " + String(batteryVoltage, 3));
+// #define DEBUG
 ```
 
 To calibrate:
@@ -109,6 +108,8 @@ Finally update this constant with your calculated V_REF_NEW value.
 ```
 #define BATTERY_ADC_REFERENCE 3.55f
 ```
+
+After calibration, comment again `DEBUG` definition.
 
 # Firmware
 

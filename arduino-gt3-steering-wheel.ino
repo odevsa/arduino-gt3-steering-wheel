@@ -3,6 +3,8 @@
 #include "driver/rtc_io.h"
 #include "esp32-hal-cpu.h"
 
+// #define DEBUG
+
 // CPU Frequency and Sleep Timeout
 #define CPU_FREQ_MHZ 80
 #define SLEEP_TIMEOUT_MS 900000
@@ -33,7 +35,7 @@ int previousRightEncoderClock;
 #define PIN_BATTERY_LEVEL 34
 #define BATTERY_VOLTAGE_MAX 4.2f
 #define BATTERY_VOLTAGE_MIN 3.0f
-#define BATTERY_ADC_REFERENCE 3.625f
+#define BATTERY_ADC_REFERENCE 3.575f
 #define BATTERY_ADC_MAX 4095.0f
 #define BATTERY_DIVIDER_RATIO ((100.0f + 100.0f) / 100.0f) // 2 resistors of 100k ohms
 #define BATTERY_AVG_AMOUNT 10
@@ -129,21 +131,21 @@ float loadAverageBatteryPercent()
   }
 
   float percent = loadBatteryPercent();
+  float sum = 0.0f;
 
   if (abs(percent - lastBatteryPercent) < BATTERY_READ_PERCENT_DEVIATION_MAX)
   {
     for (int i = 1; i < BATTERY_AVG_AMOUNT; i++)
+    {
       batteryPercents[i - 1] = batteryPercents[i];
+      sum += batteryPercents[i - 1];
+    }
 
     batteryPercents[BATTERY_AVG_AMOUNT - 1] = percent;
+    sum += batteryPercents[BATTERY_AVG_AMOUNT - 1];
   }
 
   lastBatteryPercent = percent;
-
-  float sum = 0.0f;
-  for (int i = 0; i < BATTERY_AVG_AMOUNT; i++)
-    sum += batteryPercents[i];
-
   return sum / BATTERY_AVG_AMOUNT;
 }
 
@@ -154,8 +156,9 @@ float loadBatteryPercent()
   float batteryVoltage = (adcValue / BATTERY_ADC_MAX) * BATTERY_ADC_REFERENCE * BATTERY_DIVIDER_RATIO;
   float percent = (batteryVoltage - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN) * 100.0f;
 
-  // Uncomment this line below for calibrate Vref
-  // Serial.println("Calculated Voltage: " + String(batteryVoltage, 3));
+#ifdef DEBUG
+  Serial.println("Calculated Voltage: " + String(batteryVoltage, 3));
+#endif
 
   if (percent > 100.0f)
     percent = 100.0f;
@@ -221,7 +224,9 @@ void enterDeepSleep()
 
 void setup()
 {
-  Serial.begin(9600);
+#ifdef DEBUG
+  Serial.begin(115200);
+#endif
 
   // Set CPU Frequency
   setCpuFrequencyMhz(CPU_FREQ_MHZ);
