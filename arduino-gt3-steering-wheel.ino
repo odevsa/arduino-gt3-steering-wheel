@@ -27,9 +27,14 @@ int buttonColSize =
 #define PIN_RIGHT_ENCODER_DATA 16
 #define PIN_RIGHT_ENCODER_CLOCK 17
 #define PIN_RIGHT_ENCODER_SWITCH 4
+#define ENCODER_DEBOUNCE 500
 
-int previousLeftEncoderClock;
-int previousRightEncoderClock;
+volatile int leftEncoderDelta = 0;
+volatile int rightEncoderDelta = 0;
+volatile uint8_t prevLeftState = 0;
+volatile uint8_t prevRightState = 0;
+volatile uint32_t lastLeftEncMicros = 0;
+volatile uint32_t lastRightEncMicros = 0;
 
 // Battery
 #define PIN_BATTERY_LEVEL 34
@@ -72,18 +77,54 @@ void setButton(int buttonIndex, bool pressed)
   statusChanged = true;
 }
 
-int loadEncoder(int pinClock, int pinData, int &previousEncoderClock)
+void IRAM_ATTR leftEncoderISR()
 {
-  int encoderClock = digitalRead(pinClock);
-  int encoderData = digitalRead(pinData);
+  uint8_t clk = digitalRead(PIN_LEFT_ENCODER_CLOCK);
+  uint8_t dt = digitalRead(PIN_LEFT_ENCODER_DATA);
+  uint8_t s = (clk << 1) | dt;
 
-  if (encoderClock == previousEncoderClock)
-    return 0;
+  uint32_t t = micros();
+  if ((uint32_t)(t - lastLeftEncMicros) < ENCODER_DEBOUNCE)
+  {
+    prevLeftState = s;
+    return;
+  }
+  lastLeftEncMicros = t;
 
-  previousEncoderClock = encoderClock;
-  resetActivityTimer();
+  uint8_t ps = prevLeftState;
+  if (s == ps)
+    return;
 
-  return encoderClock ^ encoderData ? -1 : 1;
+  uint8_t prev_clk = (ps >> 1) & 1;
+  if (prev_clk == 0 && clk == 1)
+    dt == 1 ? leftEncoderDelta++ : leftEncoderDelta--;
+
+  prevLeftState = s;
+}
+
+void IRAM_ATTR rightEncoderISR()
+{
+  uint8_t clk = digitalRead(PIN_RIGHT_ENCODER_CLOCK);
+  uint8_t dt = digitalRead(PIN_RIGHT_ENCODER_DATA);
+  uint8_t s = (clk << 1) | dt;
+
+  uint32_t t = micros();
+  if ((uint32_t)(t - lastRightEncMicros) < ENCODER_DEBOUNCE)
+  {
+    prevRightState = s;
+    return;
+  }
+  lastRightEncMicros = t;
+
+  uint8_t ps = prevRightState;
+  if (s == ps)
+    return;
+
+  uint8_t prev_clk = (ps >> 1) & 1;
+  if (prev_clk == 0 && clk == 1)
+    dt == 1 ? rightEncoderDelta++ : rightEncoderDelta--;
+
+  prevRightState = s;
 }
 
 void loadButtons()
@@ -101,18 +142,51 @@ void loadButtons()
     digitalWrite(PIN_BUTTON_ARRAY_ROW[row], HIGH);
   }
 
-  int leftEncoder = loadEncoder(PIN_LEFT_ENCODER_CLOCK, PIN_LEFT_ENCODER_DATA,
-                                previousLeftEncoderClock);
-  setButton(buttonCurrentIndex++, leftEncoder == -1);
-  setButton(buttonCurrentIndex++, leftEncoder == 1);
+  setButton(buttonCurrentIndex++, false);
+  setButton(buttonCurrentIndex++, false);
   setButton(buttonCurrentIndex++, digitalRead(PIN_LEFT_ENCODER_SWITCH) == LOW);
 
-  int rightEncoder =
-      loadEncoder(PIN_RIGHT_ENCODER_CLOCK, PIN_RIGHT_ENCODER_DATA,
-                  previousRightEncoderClock);
-  setButton(buttonCurrentIndex++, rightEncoder == -1);
-  setButton(buttonCurrentIndex++, rightEncoder == 1);
+  setButton(buttonCurrentIndex++, false);
+  setButton(buttonCurrentIndex++, false);
   setButton(buttonCurrentIndex++, digitalRead(PIN_RIGHT_ENCODER_SWITCH) == LOW);
+}
+
+void pulseButton(int buttonIndex)
+{
+  resetActivityTimer();
+
+  if (!bleGamepad.isConnected())
+  {
+    bleGamepad.release(physicalButtons[buttonIndex]);
+    statusChanged = true;
+  }
+
+  bleGamepad.press(physicalButtons[buttonIndex]);
+  bleGamepad.sendReport();
+  delay(50);
+  bleGamepad.release(physicalButtons[buttonIndex]);
+  bleGamepad.sendReport();
+  statusChanged = false;
+}
+
+void processEncoderDeltas()
+{
+  noInterrupts();
+  int l = leftEncoderDelta;
+  int r = rightEncoderDelta;
+  leftEncoderDelta = 0;
+  rightEncoderDelta = 0;
+  interrupts();
+
+  int base = buttonRowSize * buttonColSize;
+  if (l < 0)
+    pulseButton(base + 0);
+  if (l > 0)
+    pulseButton(base + 1);
+  if (r < 0)
+    pulseButton(base + 3);
+  if (r > 0)
+    pulseButton(base + 4);
 }
 
 float loadAverageBatteryPercent()
@@ -249,12 +323,20 @@ void setup()
   pinMode(PIN_LEFT_ENCODER_DATA, INPUT_PULLUP);
   pinMode(PIN_LEFT_ENCODER_CLOCK, INPUT_PULLUP);
   pinMode(PIN_LEFT_ENCODER_SWITCH, INPUT_PULLUP);
-  previousLeftEncoderClock = digitalRead(PIN_LEFT_ENCODER_CLOCK);
 
   pinMode(PIN_RIGHT_ENCODER_DATA, INPUT_PULLUP);
   pinMode(PIN_RIGHT_ENCODER_CLOCK, INPUT_PULLUP);
   pinMode(PIN_RIGHT_ENCODER_SWITCH, INPUT_PULLUP);
-  previousRightEncoderClock = digitalRead(PIN_RIGHT_ENCODER_CLOCK);
+
+  prevLeftState = (digitalRead(PIN_LEFT_ENCODER_CLOCK) << 1) | digitalRead(PIN_LEFT_ENCODER_DATA);
+  prevRightState = (digitalRead(PIN_RIGHT_ENCODER_CLOCK) << 1) | digitalRead(PIN_RIGHT_ENCODER_DATA);
+  lastLeftEncMicros = micros();
+  lastRightEncMicros = micros();
+
+  attachInterrupt(digitalPinToInterrupt(PIN_LEFT_ENCODER_CLOCK), leftEncoderISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(PIN_LEFT_ENCODER_DATA), leftEncoderISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(PIN_RIGHT_ENCODER_CLOCK), rightEncoderISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(PIN_RIGHT_ENCODER_DATA), rightEncoderISR, CHANGE);
 
   // Setup Battery Level Pin
   pinMode(PIN_BATTERY_LEVEL, INPUT);
@@ -271,6 +353,7 @@ void setup()
 void loop()
 {
   loadButtons();
+  processEncoderDeltas();
   loadBatteryLevel();
   sendReport();
 
