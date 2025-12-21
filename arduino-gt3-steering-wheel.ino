@@ -75,13 +75,15 @@ void setButton(int buttonIndex, bool pressed)
 int loadEncoder(int pinClock, int pinData, int &previousEncoderClock)
 {
   int encoderClock = digitalRead(pinClock);
+  int encoderData = digitalRead(pinData);
+
   if (encoderClock == previousEncoderClock)
     return 0;
 
   previousEncoderClock = encoderClock;
   resetActivityTimer();
 
-  return encoderClock ^ digitalRead(pinData) ? -1 : 1;
+  return encoderClock ^ encoderData ? -1 : 1;
 }
 
 void loadButtons()
@@ -104,7 +106,6 @@ void loadButtons()
   setButton(buttonCurrentIndex++, leftEncoder == -1);
   setButton(buttonCurrentIndex++, leftEncoder == 1);
   setButton(buttonCurrentIndex++, digitalRead(PIN_LEFT_ENCODER_SWITCH) == LOW);
-  previousLeftEncoderClock = digitalRead(PIN_LEFT_ENCODER_CLOCK);
 
   int rightEncoder =
       loadEncoder(PIN_RIGHT_ENCODER_CLOCK, PIN_RIGHT_ENCODER_DATA,
@@ -112,7 +113,6 @@ void loadButtons()
   setButton(buttonCurrentIndex++, rightEncoder == -1);
   setButton(buttonCurrentIndex++, rightEncoder == 1);
   setButton(buttonCurrentIndex++, digitalRead(PIN_RIGHT_ENCODER_SWITCH) == LOW);
-  previousRightEncoderClock = digitalRead(PIN_RIGHT_ENCODER_CLOCK);
 }
 
 float loadAverageBatteryPercent()
