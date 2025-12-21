@@ -77,54 +77,40 @@ void setButton(int buttonIndex, bool pressed)
   statusChanged = true;
 }
 
-void IRAM_ATTR leftEncoderISR()
+void IRAM_ATTR handleEncoderISR(uint8_t clkPin, uint8_t dtPin, volatile int *delta,
+                                volatile uint8_t *prevState, volatile uint32_t *lastMicros)
 {
-  uint8_t clk = digitalRead(PIN_LEFT_ENCODER_CLOCK);
-  uint8_t dt = digitalRead(PIN_LEFT_ENCODER_DATA);
+  uint8_t clk = digitalRead(clkPin);
+  uint8_t dt = digitalRead(dtPin);
   uint8_t s = (clk << 1) | dt;
 
   uint32_t t = micros();
-  if ((uint32_t)(t - lastLeftEncMicros) < ENCODER_DEBOUNCE)
+  if ((uint32_t)(t - *lastMicros) < ENCODER_DEBOUNCE)
   {
-    prevLeftState = s;
+    *prevState = s;
     return;
   }
-  lastLeftEncMicros = t;
+  *lastMicros = t;
 
-  uint8_t ps = prevLeftState;
+  uint8_t ps = *prevState;
   if (s == ps)
     return;
 
   uint8_t prev_clk = (ps >> 1) & 1;
   if (prev_clk == 0 && clk == 1)
-    dt == 1 ? leftEncoderDelta++ : leftEncoderDelta--;
+    dt == 1 ? (*delta)++ : (*delta)--;
 
-  prevLeftState = s;
+  *prevState = s;
+}
+
+void IRAM_ATTR leftEncoderISR()
+{
+  handleEncoderISR(PIN_LEFT_ENCODER_CLOCK, PIN_LEFT_ENCODER_DATA, &leftEncoderDelta, &prevLeftState, &lastLeftEncMicros);
 }
 
 void IRAM_ATTR rightEncoderISR()
 {
-  uint8_t clk = digitalRead(PIN_RIGHT_ENCODER_CLOCK);
-  uint8_t dt = digitalRead(PIN_RIGHT_ENCODER_DATA);
-  uint8_t s = (clk << 1) | dt;
-
-  uint32_t t = micros();
-  if ((uint32_t)(t - lastRightEncMicros) < ENCODER_DEBOUNCE)
-  {
-    prevRightState = s;
-    return;
-  }
-  lastRightEncMicros = t;
-
-  uint8_t ps = prevRightState;
-  if (s == ps)
-    return;
-
-  uint8_t prev_clk = (ps >> 1) & 1;
-  if (prev_clk == 0 && clk == 1)
-    dt == 1 ? rightEncoderDelta++ : rightEncoderDelta--;
-
-  prevRightState = s;
+  handleEncoderISR(PIN_RIGHT_ENCODER_CLOCK, PIN_RIGHT_ENCODER_DATA, &rightEncoderDelta, &prevRightState, &lastRightEncMicros);
 }
 
 void loadButtons()
