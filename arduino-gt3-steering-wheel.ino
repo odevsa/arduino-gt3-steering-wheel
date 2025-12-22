@@ -196,16 +196,16 @@ float loadAverageBatteryPercent()
   if (abs(percent - lastBatteryPercent) < BATTERY_READ_PERCENT_DEVIATION_MAX)
   {
     for (int i = 1; i < BATTERY_AVG_AMOUNT; i++)
-    {
       batteryPercents[i - 1] = batteryPercents[i];
-      sum += batteryPercents[i - 1];
-    }
 
     batteryPercents[BATTERY_AVG_AMOUNT - 1] = percent;
-    sum += batteryPercents[BATTERY_AVG_AMOUNT - 1];
   }
 
   lastBatteryPercent = percent;
+
+  for (int i = 0; i < BATTERY_AVG_AMOUNT; i++)
+    sum += batteryPercents[i];
+
   return sum / BATTERY_AVG_AMOUNT;
 }
 
